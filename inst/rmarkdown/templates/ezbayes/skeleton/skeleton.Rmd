@@ -1,0 +1,95 @@
+---
+title: "ezbayes"
+author: "Danielle Galvin"
+date: "29 March 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is a template for running through the Bayesian workflow. You may need to alter the packages loaded, but these are good starters!
+
+Remember to comment on your code as you go, and keep it tidy!
+
+Good luck :)
+DJG
+
+Load packages
+```{r}
+library(Matrix)
+library(dbplyr)
+library(brms)
+library(tidyverse)
+library(tidybayes)
+```
+
+Load data
+```{r}
+
+```
+
+Look at the data: take a look at the raw data, it might be helpful!
+```{r}
+
+```
+
+Build the model
+```{r}
+#Get the information necessary about your priors for your model
+#get_prior(model formula, data=data_name, family=family(link="link))
+
+#The model
+# model_name <- brm(model formula,
+#                   data=data_name,
+#                   family=family(link="link_type"),
+#                   prior=c(prior(normal(x,x), class="b", coef="coefficient"),
+#                           prior(normal(x,x), class="Intercept", coef="coefficient")),
+#                   sample_prior="only",
+#                   iter=2000, chains=4
+#                   file_name="model_name.rds",
+#                   file_refit="on_change")
+
+#This places the model in the folder and allows it to be refit when changes are made to the MODEL (if you change data, you need to remove the file_refit from the model itself)
+#file="subfolder_name/model_name.rds", file_refit="on_change")
+
+#Save your model, this means you don't have to run the model all over again when you come back to your analysis UNLESS you want to make changes
+#saveRDS(model_name, "subfolder_name/model_name.rds")
+
+#call the model to view stats
+#model_name
+
+#Conditional effects plot
+#plot(conditional_effects(model_name), points=T)
+
+#Posterior predictive check plots
+#pp_check(model_name, type="type of pp check", group="add name if this is applicable based on type")
+```
+
+Do a sensitivity analysis of your model
+```{r}
+#Here you should run your model again, but this time double the standard deviations of your priors. Visually inspect the graphs, are they different or the same? If they are different, make sure your priors are well justified!
+```
+
+Plot the posterior values from your model
+```{r}
+#First you need to create condition data to add your draws to
+# cond_data <- distinct(model_name$data) %>% 
+#   select(-column names you do not want, when applicable)
+# posts <- add_epred_draws(model_name, newdata=cond_data)
+
+#Now you need to plot your data! You may have to pivot it based on what you want to do, but visualize that gorgeous analysis here:
+
+#When you're ready to save your plot:
+#ggsave("plot_name.jpg", plot=plot_name, width=6, height=4, dpi=600)
+```
+
+Extract the values of interest from the posterior
+```{r}
+#This largely depends on what you're trying to answer, but these functions may be useful:
+
+#summarize() <- This will allow you to see all of the means, sd, medians, etc. for your data by your different categories.You can also calculate the probability of the difference between variables by using summarize(higher=sum(variable_difference_name>0)/nrow(.))
+
+#median_qi() <- This will calculate the 95% credible interval of the median (can also do mean with mean_qi) for your variable of interest.
+```
