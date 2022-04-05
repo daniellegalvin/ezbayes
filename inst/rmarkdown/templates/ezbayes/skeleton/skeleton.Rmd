@@ -1,20 +1,14 @@
----
-title: "ezbayes"
-author: "Danielle Galvin"
-date: "29 March 2022"
-output: html_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
+___
 This is a template for running through the Bayesian workflow. You may need to alter the packages loaded, but these are good starters!
 
 Remember to comment on your code as you go, and keep it tidy!
 
 Good luck :)
 DJG
+___
+
+What is the question you are trying to answer? Write it here to remind yourself for when the analysis gets messy!
+Ex: How does miles per gallon vary based on horsepower in vehicles?
 
 Load packages
 ```{r}
@@ -23,22 +17,30 @@ library(dbplyr)
 library(brms)
 library(tidyverse)
 library(tidybayes)
+library(gapminder)
 ```
 
 Load data
 ```{r}
-
+#Example
+data <- mtcars
+head(data)
 ```
 
 Look at the data: take a look at the raw data, it might be helpful!
 ```{r}
-
+#Example
+data %>% 
+  ggplot(aes(x=hp, y=mpg))+
+  geom_point()
 ```
 
 Build the model
 ```{r}
 #Get the information necessary about your priors for your model
 #get_prior(model formula, data=data_name, family=family(link="link))
+#Example
+get_prior(mpg ~ 1 + hp, data=data, family=(poisson(link="log")))
 
 #The model
 # model_name <- brm(model formula,
@@ -47,29 +49,62 @@ Build the model
 #                   prior=c(prior(normal(x,x), class="b", coef="coefficient"),
 #                           prior(normal(x,x), class="Intercept", coef="coefficient")),
 #                   sample_prior="only",
-#                   iter=2000, chains=4
-#                   file_name="model_name.rds",
+#                   iter=2000, chains=4,
+#                   file="model_name.rds",
 #                   file_refit="on_change")
+#Example (when simulating priors, leave the sample_prior="only", then silence it when you are ready to run your model! Don't forget to silence it, this is a common mistake)
+mpg_hp_mod <- brm(mpg ~ 1 + hp,
+                  data=data,
+                  family=Gamma(link="log"),
+                  prior=c(prior(normal(0,2), class="b"),
+                          prior(normal(0,2), class="Intercept")),
+                  # sample_prior="only",
+                  iter=2000, chains=4,
+                  file="mpg_hp_mod.rds",
+                  file_refit="on_change")
 
-#This places the model in the folder and allows it to be refit when changes are made to the MODEL (if you change data, you need to remove the file_refit from the model itself)
-#file="subfolder_name/model_name.rds", file_refit="on_change")
-
-#Save your model, this means you don't have to run the model all over again when you come back to your analysis UNLESS you want to make changes
+#Save your model, this means you don't have to run the model all over again when you come back to your analysis UNLESS you want to make changes. If you make any changes to the data itself, you have to remove (silence) the file and file_refit arguments in the model above, otherwise it won't actually update your model.
 #saveRDS(model_name, "subfolder_name/model_name.rds")
+#Example
+saveRDS(mpg_hp_mod, "mpg_hp_mod.rds")
 
 #call the model to view stats
 #model_name
+#Example
+mpg_hp_mod
 
 #Conditional effects plot
 #plot(conditional_effects(model_name), points=T)
+#Example
+plot(conditional_effects(mpg_hp_mod), points=T)
 
 #Posterior predictive check plots
 #pp_check(model_name, type="type of pp check", group="add name if this is applicable based on type")
+#Suggested pp_check types: boxplot, dens, hist, stat_grouped 
+#Example
+pp_check(mpg_hp_mod, type="boxplot")
+pp_check(mpg_hp_mod, type="dens")
 ```
 
 Do a sensitivity analysis of your model
 ```{r}
 #Here you should run your model again, but this time double the standard deviations of your priors. Visually inspect the graphs, are they different or the same? If they are different, make sure your priors are well justified!
+#Example
+sens_mpg_hp_mod <- brm(mpg ~ 1 + hp,
+                  data=data,
+                  family=Gamma(link="log"),
+                  prior=c(prior(normal(0,4), class="b"),
+                          prior(normal(0,4), class="Intercept")),
+                  # sample_prior="only",
+                  iter=2000, chains=4,
+                  file="sens_mpg_hp_mod.rds",
+                  file_refit="on_change")
+saveRDS(sens_mpg_hp_mod, file="sens_mpg_hp_mod.rds")
+
+#Now compare the graphs of these models. Visually inspect them. Are they similar? If not, are your priors well justified? If not, you should probably re think them :)
+#Example
+plot(conditional_effects(sens_mpg_hp_mod), points=T)
+plot(conditional_effects(mpg_hp_mod), points=T)
 ```
 
 Plot the posterior values from your model
@@ -78,11 +113,21 @@ Plot the posterior values from your model
 # cond_data <- distinct(model_name$data) %>% 
 #   select(-column names you do not want, when applicable)
 # posts <- add_epred_draws(model_name, newdata=cond_data)
+#Example
+cond_data <- distinct(mpg_hp_mod$data) %>% select(-mpg)
+posts <- add_epred_draws(mpg_hp_mod, newdata=cond_data)
+head(posts)
 
 #Now you need to plot your data! You may have to pivot it based on what you want to do, but visualize that gorgeous analysis here:
+plot1 <- posts %>% 
+  ggplot(aes(x=hp, y=.epred))+
+  geom_smooth()
+plot1
 
 #When you're ready to save your plot:
 #ggsave("plot_name.jpg", plot=plot_name, width=6, height=4, dpi=600)
+#Example
+ggsave("plot1.jpg", plot=plot1, width=6, height=4, dpi=600)
 ```
 
 Extract the values of interest from the posterior
@@ -90,6 +135,15 @@ Extract the values of interest from the posterior
 #This largely depends on what you're trying to answer, but these functions may be useful:
 
 #summarize() <- This will allow you to see all of the means, sd, medians, etc. for your data by your different categories.You can also calculate the probability of the difference between variables by using summarize(higher=sum(variable_difference_name>0)/nrow(.))
+posts %>% 
+  select(hp, .draw, .epred) %>% 
+  summarize(mean_mpg=mean(.epred))
 
 #median_qi() <- This will calculate the 95% credible interval of the median (can also do mean with mean_qi) for your variable of interest.
+posts %>% 
+  select(hp, .draw, .epred) %>% 
+  median_qi(.epred)
 ```
+
+Don't forget to write about your results! Congrats on completing your analysis!
+
